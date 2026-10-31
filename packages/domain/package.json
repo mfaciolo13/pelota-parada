@@ -1,0 +1,6 @@
+{
+  "name": "@pelota-parada/domain",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Lógica de dominio compartida: torneos, equipos, fixture y resultados"
+}
