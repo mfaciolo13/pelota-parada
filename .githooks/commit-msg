@@ -1,0 +1,64 @@
+#!/bin/sh
+# Hook commit-msg: valida el formato del mensaje y agrega el numero de issue
+# tomado del nombre de la rama (<tipo>/<N>-<descripcion>).
+#
+# Formato esperado (primera linea):
+#   <tipo>(<alcance opcional>): <descripcion> (#N)
+#   tipos: feat, fix, docs, refactor, test, chore
+
+MSG_FILE="$1"
+TIPOS='feat|fix|docs|refactor|test|chore'
+
+FIRST_LINE=$(grep -v '^#' "$MSG_FILE" | sed -n '1p')
+
+# Commits generados por git que no siguen la convencion.
+case "$FIRST_LINE" in
+  "Merge "*|"Revert "*|"fixup! "*|"squash! "*) exit 0 ;;
+esac
+
+if [ -z "$FIRST_LINE" ]; then
+  echo "ERROR: el mensaje de commit esta vacio." >&2
+  exit 1
+fi
+
+BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+if [ -z "$BRANCH" ]; then
+  # HEAD detached (rebase, cherry-pick, bisect): se validan solo el formato.
+  ISSUE=""
+else
+  ISSUE=$(printf '%s' "$BRANCH" | sed -nE "s#^($TIPOS)/([0-9]+)-[a-z0-9-]+\$#\2#p")
+  if [ -z "$ISSUE" ]; then
+    cat >&2 <<MSG
+ERROR: la rama '$BRANCH' no sigue la convencion <tipo>/<N>-<descripcion>.
+  Ejemplo: feat/12-fixture-automatico
+  Tipos permitidos: feat, fix, docs, refactor, test, chore
+  No se puede trabajar sin un issue asociado. Renombra la rama con:
+    git branch -m <tipo>/<N>-<descripcion>
+MSG
+    exit 1
+  fi
+fi
+
+# Agrega " (#N)" al final de la primera linea si no esta referenciado el issue.
+if [ -n "$ISSUE" ] && ! printf '%s' "$FIRST_LINE" | grep -qE "#$ISSUE([^0-9]|\$)"; then
+  FIRST_LINE="$FIRST_LINE (#$ISSUE)"
+  # Reemplaza la primera linea no comentada del archivo.
+  awk -v nueva="$FIRST_LINE" 'BEGIN{done=0} { if (!done && $0 !~ /^#/) { print nueva; done=1 } else print }' "$MSG_FILE" > "$MSG_FILE.tmp" \
+    && mv "$MSG_FILE.tmp" "$MSG_FILE"
+fi
+
+PATRON="^($TIPOS)(\([a-z0-9._/-]+\))?!?: [^ A-Z].{0,71}( \(#[0-9]+\))?\$"
+if ! printf '%s' "$FIRST_LINE" | grep -qE "$PATRON"; then
+  cat >&2 <<MSG
+ERROR: el mensaje de commit no cumple el formato.
+  Recibido: $FIRST_LINE
+  Esperado: <tipo>(<alcance opcional>): <descripcion>
+  Ejemplo:  feat(fixture): generar partidos todos contra todos
+  Tipos permitidos: feat, fix, docs, refactor, test, chore
+  La descripcion va en minuscula, sin punto final y hasta 72 caracteres.
+  El numero de issue (#N) se agrega solo desde el nombre de la rama.
+MSG
+  exit 1
+fi
+
+exit 0

@@ -1,0 +1,29 @@
+#!/bin/sh
+# Hook pre-push: impide pushear ramas que no sigan <tipo>/<N>-<descripcion>.
+# main queda excluida (ademas esta protegida en GitHub).
+
+TIPOS='feat|fix|docs|refactor|test|chore'
+PATRON="^($TIPOS)/[0-9]+-[a-z0-9-]+\$"
+ZERO=0000000000000000000000000000000000000000
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  # Borrado de rama remota: se permite.
+  [ "$local_sha" = "$ZERO" ] && continue
+
+  BRANCH=${remote_ref#refs/heads/}
+  [ "$BRANCH" = "$remote_ref" ] && continue   # no es una rama (tag, etc.)
+  [ "$BRANCH" = "main" ] && continue
+
+  if ! printf '%s' "$BRANCH" | grep -qE "$PATRON"; then
+    cat >&2 <<MSG
+ERROR: la rama '$BRANCH' no sigue la convencion <tipo>/<N>-<descripcion>.
+  Ejemplo: feat/12-fixture-automatico
+  Tipos permitidos: feat, fix, docs, refactor, test, chore
+  Toda rama debe estar asociada a un issue. Renombrala con:
+    git branch -m <tipo>/<N>-<descripcion>
+MSG
+    exit 1
+  fi
+done
+
+exit 0
