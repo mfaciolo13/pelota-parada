@@ -1,0 +1,16 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Torneo {
+  id       String   @id @default(uuid()) @db.Uuid
+  nombre   String
+  creadoEn DateTime @default(now()) @map("creado_en")
+
+  @@map("torneos")
+}
