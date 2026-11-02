@@ -21,6 +21,12 @@ npm run dev --workspace @potrero/api
 | `start` | Corre la versión compilada (`build` antes) |
 | `typecheck` | Chequea los tipos sin generar archivos |
 
+## Endpoints
+
+| Método | Ruta | Respuesta |
+| --- | --- | --- |
+| `GET` | `/health` | `200` con `{ "status": "ok" }` cuando la API está arriba |
+
 ## Variables de entorno
 
 Se validan con Zod al arrancar. Si alguna es inválida, la API no levanta.

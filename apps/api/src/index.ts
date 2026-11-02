@@ -1,9 +1,7 @@
-import express from "express";
+import { createApp } from "./app.js";
 import { env } from "./env.js";
 
-const app = express();
-
-app.use(express.json());
+const app = createApp();
 
 app.listen(env.PORT, () => {
   console.log(`API escuchando en http://localhost:${env.PORT}`);
