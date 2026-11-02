@@ -1,3 +1,3 @@
 # Documentación
 
-Documentación técnica y de la tesis de pelota-parada.
+Documentación técnica y de la tesis de potrero.

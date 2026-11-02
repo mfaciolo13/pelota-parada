@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Pelota Parada",
-    "slug": "pelota-parada",
+    "name": "Potrero",
+    "slug": "potrero",
     "version": "0.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "pelotaparada",
+    "scheme": "potrero",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
