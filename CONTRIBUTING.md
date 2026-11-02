@@ -53,3 +53,14 @@ Qué hacen:
 - `pre-push`: rechaza el push de ramas que no sigan la convención.
 
 Si un commit o push es rechazado, el mensaje de error indica qué corregir.
+
+## Validación en cada pull request
+
+Los hooks locales se pueden saltear con `--no-verify`, así que GitHub Actions repite la validación en cada PR con el workflow [validar-nombres.yml](.github/workflows/validar-nombres.yml):
+
+- El nombre de la rama debe seguir `<tipo>/<N>-<descripcion>`.
+- Todos los commits del PR deben seguir `<tipo>(<alcance opcional>): <descripcion>`.
+- Los commits de merge, `revert`, `fixup!` y `squash!` se ignoran, igual que en los hooks.
+- Los PRs creados por bots no se validan.
+
+El check **Validar ramas y commits** es requerido para mergear a `main`. La lógica está en [.github/scripts/validar-nombres.sh](.github/scripts/validar-nombres.sh) y debe mantenerse sincronizada con los hooks de `.githooks/`.
