@@ -53,7 +53,8 @@ La API se despliega en [Railway](https://railway.com) desde la rama `main` del r
 | Settings → Build → Custom Build Command | `npm run build --workspace @potrero/api` |
 | Settings → Deploy → Custom Start Command | `npm run start --workspace @potrero/api` |
 | Settings → Deploy → Healthcheck Path | `/health` |
-| Settings → Build → Watch Paths | `/apps/api/**`, `/package.json`, `/package-lock.json` |
+| Settings → Build → Watch Paths | Opcional: `/apps/api/**`, `/package.json`, `/package-lock.json`. Sin ellos, cada push a `main` redespliega aunque solo cambie la app móvil |
+| Settings → Networking → Generate Domain | puerto `8080`, el mismo de la variable `PORT` |
 | Settings → Networking → Public Networking | Generate Domain |
 
 Variables del servicio:
@@ -62,8 +63,9 @@ Variables del servicio:
 | --- | --- |
 | `DATABASE_URL` | La cadena del Transaction pooler de Supabase |
 | `RAILPACK_NODE_VERSION` | `24`, igual que la CI. La API necesita Node 22.9 o superior |
+| `PORT` | `8080`. Se fija a mano para que coincida con el puerto del dominio público |
 
-`PORT` lo define Railway solo. `DIRECT_URL` no se carga: solo la usa el CLI de Prisma para migrar, y las migraciones se aplican a mano (ver arriba).
+`DIRECT_URL` no se carga en Railway: solo la usa el CLI de Prisma para migrar, las migraciones se aplican a mano (ver arriba) y esa cadena lleva la contraseña de la base, así que no conviene tenerla donde no hace falta.
 
 Para verificar un despliegue: `GET /health` debe responder `{ "status": "ok" }` y `GET /health/db` debe responder `{ "status": "ok", "db": "ok" }`.
 
