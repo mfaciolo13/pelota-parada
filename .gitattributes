@@ -1,0 +1,2 @@
+# Los hooks de git son scripts de shell: siempre con LF, aun en Windows.
+.githooks/* text eol=lf

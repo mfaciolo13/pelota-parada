@@ -2,7 +2,7 @@
 name: Historia de usuario
 about: Nueva funcionalidad descrita desde la perspectiva del usuario
 title: "[HU] "
-labels: historia-de-usuario
+labels: historia
 assignees: ""
 ---
 
