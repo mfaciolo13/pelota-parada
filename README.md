@@ -24,7 +24,10 @@ git config core.hooksPath .githooks   # activa los hooks de commits y ramas
 npm install                           # instala las dependencias de todos los workspaces
 ```
 
-Los paquetes todavía no tienen código ni scripts. Los comandos para correr la app y la API se agregan junto con cada paquete.
+Para correr cada paquete:
+
+- App móvil: `npm run start --workspace @pelota-parada/mobile`
+- API: ver [apps/api/README.md](apps/api/README.md)
 
 Para cualquier comando dentro de un paquete:
 
