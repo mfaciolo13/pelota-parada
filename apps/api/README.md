@@ -43,12 +43,36 @@ Como la base es compartida, cuidá estos puntos:
 
 Cada tabla que se cree debe habilitar RLS (`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`). Supabase expone el esquema `public` por su API con la clave pública, y sin RLS cualquiera con esa clave podría leer y escribir la tabla. La API no se ve afectada, porque accede con Prisma por la conexión de Postgres.
 
+## Despliegue (Railway)
+
+La API se despliega en [Railway](https://railway.com) desde la rama `main` del repo. Railway dejó de aceptar archivos de configuración nuevos (`railway.json`), así que todo se configura en el panel del servicio:
+
+| Dónde | Valor |
+| --- | --- |
+| Source → Root Directory | vacío (es un monorepo con workspaces, se construye desde la raíz) |
+| Settings → Build → Custom Build Command | `npm run build --workspace @potrero/api` |
+| Settings → Deploy → Custom Start Command | `npm run start --workspace @potrero/api` |
+| Settings → Deploy → Healthcheck Path | `/health` |
+| Settings → Build → Watch Paths | `/apps/api/**`, `/package.json`, `/package-lock.json` |
+| Settings → Networking → Public Networking | Generate Domain |
+
+Variables del servicio:
+
+| Variable | Valor |
+| --- | --- |
+| `DATABASE_URL` | La cadena del Transaction pooler de Supabase |
+| `RAILPACK_NODE_VERSION` | `24`, igual que la CI. La API necesita Node 22.9 o superior |
+
+`PORT` lo define Railway solo. `DIRECT_URL` no se carga: solo la usa el CLI de Prisma para migrar, y las migraciones se aplican a mano (ver arriba).
+
+Para verificar un despliegue: `GET /health` debe responder `{ "status": "ok" }` y `GET /health/db` debe responder `{ "status": "ok", "db": "ok" }`.
+
 ## Scripts
 
 | Script | Qué hace |
 | --- | --- |
 | `dev` | Levanta la API y reinicia al guardar cambios |
-| `build` | Compila TypeScript a `dist/` |
+| `build` | Genera el cliente de Prisma y compila TypeScript a `dist/` |
 | `start` | Corre la versión compilada (`build` antes) |
 | `typecheck` | Chequea los tipos sin generar archivos |
 
