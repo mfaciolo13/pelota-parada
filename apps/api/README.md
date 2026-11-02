@@ -1,4 +1,4 @@
-# @pelota-parada/api
+# @potrero/api
 
 API del backend. Node.js + TypeScript con Express y Zod.
 
@@ -9,7 +9,7 @@ Requisitos: Node.js 22.9 o superior. Desde la raíz del repo:
 ```sh
 npm install
 cp apps/api/.env.example apps/api/.env   # opcional: sin .env usa los valores por defecto
-npm run dev --workspace @pelota-parada/api
+npm run dev --workspace @potrero/api
 ```
 
 ## Scripts
