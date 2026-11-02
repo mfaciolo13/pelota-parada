@@ -64,3 +64,23 @@ Los hooks locales se pueden saltear con `--no-verify`, así que GitHub Actions r
 - Los PRs creados por bots no se validan.
 
 El check **Validar ramas y commits** es requerido para mergear a `main`. La lógica está en [.github/scripts/validar-nombres.sh](.github/scripts/validar-nombres.sh) y debe mantenerse sincronizada con los hooks de `.githooks/`.
+
+## CI en cada pull request
+
+El workflow [ci.yml](.github/workflows/ci.yml) corre lint, chequeo de tipos y tests, pero solo de los paquetes que el PR afecta:
+
+| Si el PR toca | Se verifica |
+| --- | --- |
+| `apps/api` | api |
+| `apps/mobile` | mobile |
+| `packages/domain` | api, mobile y domain, porque dependen de él |
+| `package.json` o `package-lock.json` de la raíz, `eslint.config.mjs` o la propia CI | api, mobile y domain |
+| solo `docs/` u otros archivos | nada |
+
+Las reglas están en [.github/scripts/paquetes-afectados.sh](.github/scripts/paquetes-afectados.sh). Para correr lo mismo en local:
+
+```sh
+npm run lint && npm run typecheck && npm run test
+```
+
+El check **CI** es el único requerido en `main`. Falla si falla cualquier paquete verificado y pasa si no hubo nada que verificar. Al agregar un paquete nuevo hay que sumarlo al script y al filtro del workflow, pero no a la protección de `main`.

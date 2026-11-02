@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  cambios:
+    name: Detectar paquetes afectados
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      paquetes: ${{ steps.paquetes.outputs.lista }}
+    steps:
+      # El script de reglas vive en el repo.
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filtro
+        with:
+          filters: |
+            comun:
+              - package.json
+              - package-lock.json
+              - eslint.config.mjs
+              - .github/workflows/ci.yml
+              - .github/scripts/paquetes-afectados.sh
+            domain:
+              - packages/domain/**
+            api:
+              - apps/api/**
+            mobile:
+              - apps/mobile/**
+
+      - name: Calcular paquetes a verificar
+        id: paquetes
+        env:
+          COMUN: ${{ steps.filtro.outputs.comun }}
+          DOMAIN: ${{ steps.filtro.outputs.domain }}
+          API: ${{ steps.filtro.outputs.api }}
+          MOBILE: ${{ steps.filtro.outputs.mobile }}
+        run: |
+          lista=$(bash .github/scripts/paquetes-afectados.sh)
+          echo "Paquetes a verificar: $lista"
+          echo "lista=$lista" >> "$GITHUB_OUTPUT"
+
+  verificar:
+    name: Verificar ${{ matrix.paquete }}
+    needs: cambios
+    if: needs.cambios.outputs.paquetes != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        paquete: ${{ fromJSON(needs.cambios.outputs.paquetes) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint --workspace @potrero/${{ matrix.paquete }}
+
+      - name: Tipos
+        run: npm run typecheck --workspace @potrero/${{ matrix.paquete }}
+
+      - name: Tests
+        run: npm run test --workspace @potrero/${{ matrix.paquete }}
+
+  ci:
+    # Este es el unico check que se marca como requerido en main.
+    name: CI
+    needs: [cambios, verificar]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resultado de la CI
+        env:
+          CAMBIOS: ${{ needs.cambios.result }}
+          VERIFICAR: ${{ needs.verificar.result }}
+        run: |
+          echo "Deteccion: $CAMBIOS. Verificacion: $VERIFICAR."
+          # "skipped" es valido: ningun paquete cambio.
+          if [ "$CAMBIOS" != "success" ]; then exit 1; fi
+          if [ "$VERIFICAR" != "success" ] && [ "$VERIFICAR" != "skipped" ]; then exit 1; fi
