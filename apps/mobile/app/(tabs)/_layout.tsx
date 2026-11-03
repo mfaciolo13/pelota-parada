@@ -1,9 +1,11 @@
 import { Tabs } from 'expo-router';
 
-export default function TabLayout() {
+const TabLayout = () => {
   return (
     <Tabs>
       <Tabs.Screen name="index" options={{ title: 'Inicio' }} />
     </Tabs>
   );
-}
+};
+
+export default TabLayout;

@@ -45,6 +45,9 @@ const Navigation = () => {
     <NavigationThemeProvider value={navigationTheme}>
       <Stack screenOptions={{ headerShown: false, headerTitleStyle: t.typography.title }}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Protected guard={__DEV__}>
+          <Stack.Screen name="showcase" options={{ headerShown: true, title: "Design system" }} />
+        </Stack.Protected>
       </Stack>
     </NavigationThemeProvider>
   );
