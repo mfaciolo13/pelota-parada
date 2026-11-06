@@ -26,6 +26,8 @@ El archivo `.env` está ignorado por git. No subas nunca esa cadena al repo: inc
 
 La API accede a la base con [Prisma](https://www.prisma.io) 7. El schema está en [prisma/schema.prisma](prisma/schema.prisma) y las migraciones en `prisma/migrations/`. El cliente se genera en `src/generated/` (ignorado por git) al correr `npm install`.
 
+El modelo completo, con diagramas y las reglas de negocio que refleja, está en [docs/modelo-de-datos.md](../../docs/modelo-de-datos.md).
+
 - **`DATABASE_URL`** (Transaction pooler) la usa la API en ejecución.
 - **`DIRECT_URL`** (conexión directa) la usa solo el CLI de Prisma para migrar. Copiala de **Connect → Direct connection** y guardala en `apps/api/.env`. Si tu red no tiene IPv6, usá la del Session pooler.
 

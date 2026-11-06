@@ -7,10 +7,555 @@ datasource db {
   provider = "postgresql"
 }
 
-model Torneo {
-  id       String   @id @default(uuid()) @db.Uuid
-  nombre   String
-  creadoEn DateTime @default(now()) @map("creado_en")
+enum UserRole {
+  PLAYER
+  ORGANIZER
+  REFEREE
+  ADMIN
+}
 
-  @@map("torneos")
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum JoinRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum TournamentFormat {
+  F5
+  F7
+}
+
+enum TournamentStatus {
+  REGISTRATION
+  IN_PROGRESS
+  FINISHED
+}
+
+enum RefereeFeePayer {
+  ORGANIZER
+  TEAMS
+}
+
+enum RegistrationStatus {
+  ACTIVE
+  REMOVED
+}
+
+enum MatchStatus {
+  PENDING
+  PLAYED
+  WALKOVER
+  CANCELLED
+}
+
+enum MatchEventType {
+  GOAL
+  YELLOW_CARD
+  RED_CARD
+}
+
+enum ChargeType {
+  FEE
+  FINE
+}
+
+enum ChargeStatus {
+  PENDING
+  OVERDUE
+  PAID
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+}
+
+enum PaymentStatus {
+  REPORTED
+  CONFIRMED
+  REJECTED
+}
+
+enum SponsorTier {
+  MAIN
+  OFFICIAL
+}
+
+enum SponsorStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ReviewType {
+  TOURNAMENT
+  PLAYER
+  REFEREE
+}
+
+enum PushPlatform {
+  ANDROID
+  IOS
+  WEB
+}
+
+model Region {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  users             User[]
+  organizerRequests OrganizerRequest[]
+  teams             Team[]
+  tournaments       Tournament[]
+
+  @@map("regions")
+}
+
+model User {
+  id                 String    @id @db.Uuid
+  name               String
+  avatarPath         String?   @map("avatar_path")
+  role               UserRole?
+  regionId           String?   @map("region_id") @db.Uuid
+  policiesAcceptedAt DateTime? @map("policies_accepted_at") @db.Timestamptz(3)
+  policiesVersion    String?   @map("policies_version")
+  identityVerifiedAt DateTime? @map("identity_verified_at") @db.Timestamptz(3)
+  removedAt          DateTime? @map("removed_at") @db.Timestamptz(3)
+  removalReason      String?   @map("removal_reason")
+  removedById        String?   @map("removed_by_id") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  region       Region? @relation(fields: [regionId], references: [id])
+  removedBy    User?   @relation("UserRemoval", fields: [removedById], references: [id])
+  removedUsers User[]  @relation("UserRemoval")
+
+  organizerRequests         OrganizerRequest[]  @relation("OrganizerRequester")
+  reviewedOrganizerRequests OrganizerRequest[]  @relation("OrganizerRequestReviewer")
+  captainedTeams            Team[]
+  teamMemberships           TeamMember[]
+  joinRequests              JoinRequest[]       @relation("JoinRequester")
+  respondedJoinRequests     JoinRequest[]       @relation("JoinRequestResponder")
+  organizedTournaments      Tournament[]        @relation("TournamentOrganizer")
+  removedTournaments        Tournament[]        @relation("TournamentRemoval")
+  playerRegistrations       RegisteredPlayer[]
+  refereedTournaments       TournamentReferee[]
+  createdInvitations        RefereeInvitation[] @relation("InvitationCreator")
+  acceptedInvitations       RefereeInvitation[] @relation("InvitationAcceptor")
+  refereedMatches           Match[]             @relation("MatchReferee")
+  enteredResults            Match[]             @relation("ResultEntry")
+  correctedResults          Match[]             @relation("ResultCorrection")
+  events                    MatchEvent[]
+  reportedPayments          Payment[]           @relation("PaymentReporter")
+  resolvedPayments          Payment[]           @relation("PaymentResolver")
+  proposedSponsors          Sponsor[]           @relation("SponsorProposer")
+  reviewedSponsors          Sponsor[]           @relation("SponsorReviewer")
+  removedSponsors           Sponsor[]           @relation("SponsorRemoval")
+  writtenReviews            Review[]            @relation("ReviewAuthor")
+  receivedReviews           Review[]            @relation("ReviewTarget")
+  devices                   PushDevice[]
+  notifications             Notification[]
+
+  @@index([regionId])
+  @@map("users")
+}
+
+model OrganizerRequest {
+  id              String        @id @default(uuid()) @db.Uuid
+  userId          String        @map("user_id") @db.Uuid
+  regionId        String        @map("region_id") @db.Uuid
+  description     String
+  photos          String[]      @default([])
+  status          RequestStatus @default(PENDING)
+  reviewedById    String?       @map("reviewed_by_id") @db.Uuid
+  reviewedAt      DateTime?     @map("reviewed_at") @db.Timestamptz(3)
+  rejectionReason String?       @map("rejection_reason")
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user       User   @relation("OrganizerRequester", fields: [userId], references: [id])
+  region     Region @relation(fields: [regionId], references: [id])
+  reviewedBy User?  @relation("OrganizerRequestReviewer", fields: [reviewedById], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("organizer_requests")
+}
+
+model Team {
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  regionId   String   @map("region_id") @db.Uuid
+  captainId  String   @map("captain_id") @db.Uuid
+  inviteCode String   @unique @map("invite_code")
+  crestPath  String?  @map("crest_path")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  region  Region @relation(fields: [regionId], references: [id])
+  captain User   @relation(fields: [captainId], references: [id])
+
+  members       TeamMember[]
+  joinRequests  JoinRequest[]
+  registrations Registration[]
+
+  @@index([regionId])
+  @@index([captainId])
+  @@map("teams")
+}
+
+model TeamMember {
+  id       String    @id @default(uuid()) @db.Uuid
+  teamId   String    @map("team_id") @db.Uuid
+  userId   String    @map("user_id") @db.Uuid
+  joinedAt DateTime  @default(now()) @map("joined_at") @db.Timestamptz(3)
+  leftAt   DateTime? @map("left_at") @db.Timestamptz(3)
+
+  team Team @relation(fields: [teamId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([teamId])
+  @@index([userId])
+  @@map("team_members")
+}
+
+model JoinRequest {
+  id            String            @id @default(uuid()) @db.Uuid
+  teamId        String            @map("team_id") @db.Uuid
+  userId        String            @map("user_id") @db.Uuid
+  message       String?
+  status        JoinRequestStatus @default(PENDING)
+  respondedById String?           @map("responded_by_id") @db.Uuid
+  respondedAt   DateTime?         @map("responded_at") @db.Timestamptz(3)
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  team        Team  @relation(fields: [teamId], references: [id])
+  user        User  @relation("JoinRequester", fields: [userId], references: [id])
+  respondedBy User? @relation("JoinRequestResponder", fields: [respondedById], references: [id])
+
+  @@index([teamId, status])
+  @@index([userId])
+  @@map("join_requests")
+}
+
+model Tournament {
+  id              String           @id @default(uuid()) @db.Uuid
+  name            String
+  description     String?
+  regionId        String           @map("region_id") @db.Uuid
+  organizerId     String           @map("organizer_id") @db.Uuid
+  format          TournamentFormat
+  legs            Int              @default(1)
+  status          TournamentStatus @default(REGISTRATION)
+  startDate       DateTime         @map("start_date") @db.Date
+  maxTeams        Int?             @map("max_teams")
+  matchdayFee     Decimal          @map("matchday_fee") @db.Decimal(12, 2)
+  matchdayFine    Decimal          @map("matchday_fine") @db.Decimal(12, 2)
+  refereeFee      Decimal          @map("referee_fee") @db.Decimal(12, 2)
+  refereeFeePayer RefereeFeePayer  @map("referee_fee_payer")
+  pointsWin       Int              @default(3) @map("points_win")
+  pointsDraw      Int              @default(1) @map("points_draw")
+  walkoverGoals   Int              @default(3) @map("walkover_goals")
+  removedAt       DateTime?        @map("removed_at") @db.Timestamptz(3)
+  removalReason   String?          @map("removal_reason")
+  removedById     String?          @map("removed_by_id") @db.Uuid
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  region    Region @relation(fields: [regionId], references: [id])
+  organizer User   @relation("TournamentOrganizer", fields: [organizerId], references: [id])
+  removedBy User?  @relation("TournamentRemoval", fields: [removedById], references: [id])
+
+  matchdays     Matchday[]
+  registrations Registration[]
+  players       RegisteredPlayer[]
+  referees      TournamentReferee[]
+  invitations   RefereeInvitation[]
+  matches       Match[]
+  sponsors      Sponsor[]
+  reviews       Review[]
+
+  @@index([regionId, status])
+  @@index([organizerId])
+  @@map("tournaments")
+}
+
+model Matchday {
+  id           String   @id @default(uuid()) @db.Uuid
+  tournamentId String   @map("tournament_id") @db.Uuid
+  number       Int
+  weekStart    DateTime @map("week_start") @db.Date
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  matches Match[]
+  charges Charge[]
+
+  @@unique([tournamentId, number])
+  @@unique([id, tournamentId])
+  @@map("matchdays")
+}
+
+model Registration {
+  id            String             @id @default(uuid()) @db.Uuid
+  tournamentId  String             @map("tournament_id") @db.Uuid
+  teamId        String             @map("team_id") @db.Uuid
+  status        RegistrationStatus @default(ACTIVE)
+  removedAt     DateTime?          @map("removed_at") @db.Timestamptz(3)
+  removalReason String?            @map("removal_reason")
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id])
+  team       Team       @relation(fields: [teamId], references: [id])
+
+  players      RegisteredPlayer[]
+  homeMatches  Match[]            @relation("HomeMatch")
+  awayMatches  Match[]            @relation("AwayMatch")
+  walkoverWins Match[]            @relation("WalkoverWinner")
+  charges      Charge[]
+  payments     Payment[]
+
+  @@unique([tournamentId, teamId])
+  @@unique([id, tournamentId])
+  @@index([teamId])
+  @@map("registrations")
+}
+
+model RegisteredPlayer {
+  id             String   @id @default(uuid()) @db.Uuid
+  registrationId String   @map("registration_id") @db.Uuid
+  tournamentId   String   @map("tournament_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  registration Registration @relation(fields: [registrationId, tournamentId], references: [id, tournamentId])
+  tournament   Tournament   @relation(fields: [tournamentId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  events MatchEvent[]
+
+  @@unique([tournamentId, userId])
+  @@unique([registrationId, userId])
+  @@index([userId])
+  @@map("registered_players")
+}
+
+model TournamentReferee {
+  tournamentId String   @map("tournament_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id])
+  user       User       @relation(fields: [userId], references: [id])
+
+  @@id([tournamentId, userId])
+  @@map("tournament_referees")
+}
+
+model RefereeInvitation {
+  id           String    @id @default(uuid()) @db.Uuid
+  tournamentId String    @map("tournament_id") @db.Uuid
+  token        String    @unique
+  createdById  String    @map("created_by_id") @db.Uuid
+  expiresAt    DateTime? @map("expires_at") @db.Timestamptz(3)
+  acceptedById String?   @map("accepted_by_id") @db.Uuid
+  acceptedAt   DateTime? @map("accepted_at") @db.Timestamptz(3)
+  revokedAt    DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id])
+  createdBy  User       @relation("InvitationCreator", fields: [createdById], references: [id])
+  acceptedBy User?      @relation("InvitationAcceptor", fields: [acceptedById], references: [id])
+
+  @@index([tournamentId])
+  @@map("referee_invitations")
+}
+
+model Match {
+  id                  String      @id @default(uuid()) @db.Uuid
+  tournamentId        String      @map("tournament_id") @db.Uuid
+  matchdayId          String      @map("matchday_id") @db.Uuid
+  homeId              String      @map("home_id") @db.Uuid
+  awayId              String      @map("away_id") @db.Uuid
+  scheduledAt         DateTime?   @map("scheduled_at") @db.Timestamptz(3)
+  refereeId           String?     @map("referee_id") @db.Uuid
+  status              MatchStatus @default(PENDING)
+  homeGoals           Int?        @map("home_goals")
+  awayGoals           Int?        @map("away_goals")
+  walkoverWinnerId    String?     @map("walkover_winner_id") @db.Uuid
+  resultEnteredById   String?     @map("result_entered_by_id") @db.Uuid
+  resultEnteredAt     DateTime?   @map("result_entered_at") @db.Timestamptz(3)
+  resultCorrectedById String?     @map("result_corrected_by_id") @db.Uuid
+  resultCorrectedAt   DateTime?   @map("result_corrected_at") @db.Timestamptz(3)
+  createdAt           DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tournament        Tournament    @relation(fields: [tournamentId], references: [id])
+  matchday          Matchday      @relation(fields: [matchdayId, tournamentId], references: [id, tournamentId])
+  home              Registration  @relation("HomeMatch", fields: [homeId, tournamentId], references: [id, tournamentId])
+  away              Registration  @relation("AwayMatch", fields: [awayId, tournamentId], references: [id, tournamentId])
+  walkoverWinner    Registration? @relation("WalkoverWinner", fields: [walkoverWinnerId], references: [id])
+  referee           User?         @relation("MatchReferee", fields: [refereeId], references: [id])
+  resultEnteredBy   User?         @relation("ResultEntry", fields: [resultEnteredById], references: [id])
+  resultCorrectedBy User?         @relation("ResultCorrection", fields: [resultCorrectedById], references: [id])
+
+  events MatchEvent[]
+
+  @@index([tournamentId, status])
+  @@index([matchdayId])
+  @@index([refereeId])
+  @@map("matches")
+}
+
+model MatchEvent {
+  id             String         @id @default(uuid()) @db.Uuid
+  matchId        String         @map("match_id") @db.Uuid
+  registrationId String         @map("registration_id") @db.Uuid
+  userId         String         @map("user_id") @db.Uuid
+  type           MatchEventType
+  minute         Int?
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  match  Match            @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player RegisteredPlayer @relation(fields: [registrationId, userId], references: [registrationId, userId])
+  user   User             @relation(fields: [userId], references: [id])
+
+  @@index([matchId])
+  @@index([userId, type])
+  @@map("match_events")
+}
+
+model Charge {
+  id             String       @id @default(uuid()) @db.Uuid
+  registrationId String       @map("registration_id") @db.Uuid
+  matchdayId     String       @map("matchday_id") @db.Uuid
+  type           ChargeType
+  amount         Decimal      @db.Decimal(12, 2)
+  status         ChargeStatus @default(PENDING)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  registration Registration @relation(fields: [registrationId], references: [id])
+  matchday     Matchday     @relation(fields: [matchdayId], references: [id])
+
+  payments PaymentCharge[]
+
+  @@unique([registrationId, matchdayId, type])
+  @@index([registrationId, status])
+  @@map("charges")
+}
+
+model Payment {
+  id              String        @id @default(uuid()) @db.Uuid
+  registrationId  String        @map("registration_id") @db.Uuid
+  amount          Decimal       @db.Decimal(12, 2)
+  method          PaymentMethod
+  status          PaymentStatus @default(REPORTED)
+  receiptPath     String?       @map("receipt_path")
+  reportedById    String        @map("reported_by_id") @db.Uuid
+  reportedAt      DateTime      @default(now()) @map("reported_at") @db.Timestamptz(3)
+  resolvedById    String?       @map("resolved_by_id") @db.Uuid
+  resolvedAt      DateTime?     @map("resolved_at") @db.Timestamptz(3)
+  rejectionReason String?       @map("rejection_reason")
+
+  registration Registration @relation(fields: [registrationId], references: [id])
+  reportedBy   User         @relation("PaymentReporter", fields: [reportedById], references: [id])
+  resolvedBy   User?        @relation("PaymentResolver", fields: [resolvedById], references: [id])
+
+  charges PaymentCharge[]
+
+  @@index([registrationId, status])
+  @@map("payments")
+}
+
+model PaymentCharge {
+  paymentId String @map("payment_id") @db.Uuid
+  chargeId  String @map("charge_id") @db.Uuid
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  charge  Charge  @relation(fields: [chargeId], references: [id])
+
+  @@id([paymentId, chargeId])
+  @@index([chargeId])
+  @@map("payment_charges")
+}
+
+model Sponsor {
+  id            String        @id @default(uuid()) @db.Uuid
+  tournamentId  String        @map("tournament_id") @db.Uuid
+  proposerId    String        @map("proposer_id") @db.Uuid
+  name          String
+  logoPath      String?       @map("logo_path")
+  linkUrl       String?       @map("link_url")
+  tier          SponsorTier
+  status        SponsorStatus @default(PENDING)
+  reviewedById  String?       @map("reviewed_by_id") @db.Uuid
+  reviewedAt    DateTime?     @map("reviewed_at") @db.Timestamptz(3)
+  removedAt     DateTime?     @map("removed_at") @db.Timestamptz(3)
+  removalReason String?       @map("removal_reason")
+  removedById   String?       @map("removed_by_id") @db.Uuid
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tournament Tournament @relation(fields: [tournamentId], references: [id])
+  proposer   User       @relation("SponsorProposer", fields: [proposerId], references: [id])
+  reviewedBy User?      @relation("SponsorReviewer", fields: [reviewedById], references: [id])
+  removedBy  User?      @relation("SponsorRemoval", fields: [removedById], references: [id])
+
+  @@index([tournamentId, status])
+  @@map("sponsors")
+}
+
+model Review {
+  id           String     @id @default(uuid()) @db.Uuid
+  type         ReviewType
+  authorId     String     @map("author_id") @db.Uuid
+  tournamentId String     @map("tournament_id") @db.Uuid
+  targetId     String?    @map("target_id") @db.Uuid
+  rating       Int
+  comment      String?
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  author     User       @relation("ReviewAuthor", fields: [authorId], references: [id])
+  tournament Tournament @relation(fields: [tournamentId], references: [id])
+  target     User?      @relation("ReviewTarget", fields: [targetId], references: [id])
+
+  @@index([tournamentId, type])
+  @@index([targetId, type])
+  @@map("reviews")
+}
+
+model PushDevice {
+  id        String       @id @default(uuid()) @db.Uuid
+  userId    String       @map("user_id") @db.Uuid
+  token     String       @unique
+  platform  PushPlatform
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_devices")
+}
+
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  type      String
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime? @map("read_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("notifications")
 }
