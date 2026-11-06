@@ -158,7 +158,7 @@ Además, claves foráneas compuestas impiden mezclar torneos: una fecha, un part
 Estas decisiones las tomé donde el informe no define. Conviene validarlas con el equipo.
 
 1. **Verificación de identidad.** No se guarda número de DNI ni fotos, solo `identity_verified_at`. Si el servicio que salga del spike #94 necesita una referencia, se agrega una columna. El árbitro puede quedar sin verificar.
-2. **Rol y capitán.** `users.role` es nulo hasta que la persona lo elige (RF-05). El capitán no es un rol: es quien figura en `teams.captain_id`. Cómo se asigna el admin queda para #85.
+2. **Rol y capitán.** `users.role` es nulo hasta que la persona lo elige (RF-05). El capitán no es un rol: es quien figura en `teams.captain_id`. Los roles y cómo se asigna el admin están en [roles-y-permisos.md](roles-y-permisos.md).
 3. **Quién paga el arbitraje.** `referee_fee_payer` admite `ORGANIZER` o `TEAMS`. El informe no dice cómo se reparte entre equipos.
 4. **Baja reversible.** RN-05 da de baja y RN-07 dice que saldar la deuda habilita de nuevo. El modelo trata la habilitación como derivada. Falta definir si un equipo dado de baja puede volver al torneo.
 5. **Reviews.** El alcance del informe habla de reviews de torneos y organizadores, y los RF-31, RF-39 y RF-40 hablan de torneos, jugadores y árbitros. El modelo usa un tipo `TOURNAMENT`, `PLAYER` o `REFEREE`. El organizador se califica a través del torneo. Faltan las reglas de quién califica a quién en RF-39 y RF-40.
