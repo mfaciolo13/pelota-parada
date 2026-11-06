@@ -8,7 +8,7 @@ Requisitos: Node.js 22.9 o superior y un proyecto de Supabase (ver más abajo). 
 
 ```sh
 npm install
-cp apps/api/.env.example apps/api/.env   # y completá DATABASE_URL con tu conexión de Supabase
+cp apps/api/.env.example apps/api/.env   # y completá DATABASE_URL y SUPABASE_URL con los datos de tu proyecto de Supabase
 npm run dev --workspace @potrero/api
 ```
 
@@ -64,6 +64,7 @@ Variables del servicio:
 | Variable | Valor |
 | --- | --- |
 | `DATABASE_URL` | La cadena del Transaction pooler de Supabase |
+| `SUPABASE_URL` | La URL del proyecto de Supabase (`https://PROJECT_REF.supabase.co`) |
 | `RAILPACK_NODE_VERSION` | `24`, igual que la CI. La API necesita Node 22.9 o superior |
 | `PORT` | `8080`. Se fija a mano para que coincida con el puerto del dominio público |
 
@@ -86,6 +87,7 @@ Para verificar un despliegue: `GET /health` debe responder `{ "status": "ok" }` 
 | --- | --- | --- |
 | `GET` | `/health` | `200` con `{ "status": "ok" }` cuando la API está arriba |
 | `GET` | `/health/db` | `200` con `{ "status": "ok", "db": "ok" }` si la base responde, `503` si no |
+| `GET` | `/me` | `200` con `{ "id", "role" }` del usuario del token (header `Authorization: Bearer <token>`). `401` sin token válido, `403` si el usuario fue dado de baja. En el primer login crea su fila en `users` |
 
 ## Variables de entorno
 
@@ -95,4 +97,5 @@ Se validan con Zod al arrancar. Si alguna es inválida, la API no levanta.
 | --- | --- | --- |
 | `PORT` | `3000` | Puerto en el que escucha |
 | `DATABASE_URL` | sin valor | Cadena de conexión a Postgres en Supabase (`postgresql://usuario:clave@host:puerto/base`). Obligatoria |
+| `SUPABASE_URL` | sin valor | URL del proyecto de Supabase (`https://PROJECT_REF.supabase.co`). De ahí la API toma las claves públicas (JWKS) para validar los tokens. Obligatoria |
 | `DIRECT_URL` | sin valor | Conexión directa de Supabase. Solo la usa el CLI de Prisma para migrar, la API no la lee |
